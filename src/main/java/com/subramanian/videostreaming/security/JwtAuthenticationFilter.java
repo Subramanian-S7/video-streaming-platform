@@ -33,6 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+        System.out.println("Authorization Header: " + authHeader);
 
         // If there is no JWT token, continue the request
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -42,6 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Extract JWT token
         String token = authHeader.substring(7);
+        System.out.println("Token Valid: " + jwtUtil.validateToken(token));
 
         // Validate token
         if (jwtUtil.validateToken(token)) {

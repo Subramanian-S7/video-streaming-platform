@@ -3,7 +3,10 @@ package com.subramanian.videostreaming.controller;
 import java.io.IOException;
 import java.util.List;
 
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,7 +24,8 @@ public class VideoController {
         this.videoService = videoService;
     }
 
-    @PostMapping(value = "/upload", consumes = "multipart/form-data")
+    // Upload Video
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadVideo(
             @RequestParam("title") String title,
             @RequestParam("description") String description,
@@ -29,11 +33,9 @@ public class VideoController {
 
         try {
 
-            System.out.println("Upload API reached");
-
             if (file.isEmpty()) {
                 return ResponseEntity.badRequest()
-                        .body("Please select a video file.");
+                        .body("Please select a video.");
             }
 
             Video savedVideo = videoService.uploadVideo(title, description, file);
@@ -41,23 +43,46 @@ public class VideoController {
             return ResponseEntity.ok(savedVideo);
 
         } catch (IOException e) {
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Upload failed: " + e.getMessage());
+                    .body(e.getMessage());
         }
     }
 
+    // Get All Videos
     @GetMapping
     public List<Video> getAllVideos() {
         return videoService.getAllVideos();
     }
 
+    // Get Video By ID
     @GetMapping("/{id}")
     public Video getVideoById(@PathVariable Long id) {
         return videoService.getVideoById(id);
     }
 
+    // Delete Video
     @DeleteMapping("/{id}")
     public String deleteVideo(@PathVariable Long id) {
         return videoService.deleteVideo(id);
+    }
+
+    // Stream Video
+    @GetMapping("/stream/{id}")
+    public ResponseEntity<Resource> streamVideo(@PathVariable Long id) {
+
+        try {
+
+            Resource resource = videoService.streamVideo(id);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                    .contentType(MediaType.parseMediaType("video/mp4"))
+                    .body(resource);
+
+        } catch (Exception e) {
+
+            return ResponseEntity.notFound().build();
+        }
     }
 }

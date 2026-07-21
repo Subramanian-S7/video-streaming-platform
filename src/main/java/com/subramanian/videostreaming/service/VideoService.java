@@ -9,6 +9,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,6 +28,7 @@ public class VideoService {
         this.videoRepository = videoRepository;
     }
 
+    // Upload Video
     public Video uploadVideo(String title,
                              String description,
                              MultipartFile file) throws IOException {
@@ -40,7 +43,8 @@ public class VideoService {
 
         Path filePath = Paths.get(UPLOAD_DIR, fileName);
 
-        Files.copy(file.getInputStream(),
+        Files.copy(
+                file.getInputStream(),
                 filePath,
                 StandardCopyOption.REPLACE_EXISTING);
 
@@ -56,14 +60,17 @@ public class VideoService {
         return videoRepository.save(video);
     }
 
+    // Get All Videos
     public List<Video> getAllVideos() {
         return videoRepository.findAll();
     }
 
+    // Get Video By ID
     public Video getVideoById(Long id) {
         return videoRepository.findById(id).orElse(null);
     }
 
+    // Delete Video
     public String deleteVideo(Long id) {
 
         if (videoRepository.existsById(id)) {
@@ -72,5 +79,22 @@ public class VideoService {
         }
 
         return "Video not found";
+    }
+
+    // Stream Video
+    public Resource streamVideo(Long id) throws IOException {
+
+        Video video = videoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Video not found"));
+
+        Path path = Paths.get(video.getFilePath());
+
+        Resource resource = new UrlResource(path.toUri());
+
+        if (!resource.exists() || !resource.isReadable()) {
+            throw new RuntimeException("Video file not found");
+        }
+
+        return resource;
     }
 }

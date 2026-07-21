@@ -44,6 +44,9 @@ public class JwtUtil {
         return true;
 
     } catch (Exception e) {
+        System.out.println("JWT ERROR: " + e.getClass().getName());
+        System.out.println("JWT MESSAGE: " + e.getMessage());
+        e.printStackTrace();
         return false;
     }
 }
