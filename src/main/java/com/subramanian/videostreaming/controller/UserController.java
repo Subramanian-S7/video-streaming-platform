@@ -40,8 +40,12 @@ public class UserController {
 public String deleteUser(@PathVariable Long id) {
     return userService.deleteUser(id);
 }
-    @PostMapping("/login")
+  @PostMapping("/login")
 public String loginUser(@RequestBody LoginRequest loginRequest) {
+
+    System.out.println("******** LOGIN API HIT ********");
+
     return userService.loginUser(loginRequest);
 }
+
 }
