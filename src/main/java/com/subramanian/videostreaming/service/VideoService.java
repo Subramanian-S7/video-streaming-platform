@@ -2,6 +2,7 @@ package com.subramanian.videostreaming.service;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,8 +10,13 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -81,7 +87,7 @@ public class VideoService {
         return "Video not found";
     }
 
-    // Stream Video
+    // Stream Complete Video (Old Method)
     public Resource streamVideo(Long id) throws IOException {
 
         Video video = videoRepository.findById(id)
@@ -96,5 +102,57 @@ public class VideoService {
         }
 
         return resource;
+    }
+
+    // Stream Video with HTTP Range Support
+    public ResponseEntity<ByteArrayResource> streamVideo(Long id, String rangeHeader) throws IOException {
+
+        Video video = videoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Video not found"));
+
+        Path path = Paths.get(video.getFilePath());
+
+        try (RandomAccessFile file = new RandomAccessFile(path.toFile(), "r")) {
+
+            long fileSize = file.length();
+
+            long start = 0;
+            long end = fileSize - 1;
+
+            if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+
+                String range = rangeHeader.substring(6);
+
+                String[] ranges = range.split("-");
+
+                start = Long.parseLong(ranges[0]);
+
+                if (ranges.length > 1 && !ranges[1].isEmpty()) {
+                    end = Long.parseLong(ranges[1]);
+                }
+            }
+
+            long contentLength = end - start + 1;
+
+            byte[] data = new byte[(int) contentLength];
+
+            file.seek(start);
+            file.readFully(data);
+
+            ByteArrayResource resource = new ByteArrayResource(data);
+
+            HttpHeaders headers = new HttpHeaders();
+
+            headers.add(HttpHeaders.CONTENT_TYPE, video.getContentType());
+            headers.add(HttpHeaders.ACCEPT_RANGES, "bytes");
+            headers.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(contentLength));
+            headers.add(HttpHeaders.CONTENT_RANGE,
+                    "bytes " + start + "-" + end + "/" + fileSize);
+
+            return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                    .headers(headers)
+                    .contentType(MediaType.parseMediaType(video.getContentType()))
+                    .body(resource);
+        }
     }
 }
